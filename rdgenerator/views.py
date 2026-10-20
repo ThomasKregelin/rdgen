@@ -32,6 +32,21 @@ def _safe_parts(uuid_val, filename):
     return True
 
 
+def _has_upload_token(request):
+    """True if the request carries 'Authorization: Bearer <UPLOAD_TOKEN>'.
+
+    Used for the endpoints the GitHub workflows call (file upload, status, cleanup).
+    Fails closed: if UPLOAD_TOKEN is not configured, every request is rejected.
+    """
+    expected = _settings.UPLOAD_TOKEN
+    if not expected:
+        return False
+    header = request.headers.get('Authorization', '')
+    if not header.startswith('Bearer '):
+        return False
+    return secrets.compare_digest(header[len('Bearer '):].strip(), expected)
+
+
 def generate_custom_client(params, full_url):
     """
     Core generation logic shared by web form and JSON API.
@@ -45,7 +60,7 @@ def generate_custom_client(params, full_url):
         On failure: includes 'error' and optionally 'status_code'.
     """
     user_secret = params.get('sh_secret_field', '')
-    selfhosted = (_settings.SH_SECRET == user_secret)
+    selfhosted = bool(_settings.SH_SECRET) and secrets.compare_digest(_settings.SH_SECRET, user_secret)
     platform = params.get('platform', 'windows')
     version = params.get('version', '1.5.0')
     app_version = params.get('app_version', '')
@@ -54,7 +69,8 @@ def generate_custom_client(params, full_url):
     # RustDesk build's own version (from the checked-out tag) is used.
     delayFix = params.get('delayFix', True)
     xOffline = params.get('xOffline', False)
-    hidecm = params.get('hidecm', False)
+    # Hiding the connection window (invisible remote sessions) is disabled in this fork.
+    hidecm = False
     removeNewVersionNotif = params.get('removeNewVersionNotif', False)
     update_public_key = params.get('update_public_key', '')
     # If a custom update public key is provided, force the "remove new version
@@ -301,7 +317,8 @@ def generate_custom_client(params, full_url):
     }
 
     temp_json_path = f"data_{uuid.uuid4()}.json"
-    zip_filename = f"secrets_{uuid.uuid4()}.zip"
+    # The run UUID must be part of the name, otherwise cleanup_secrets() never finds the file.
+    zip_filename = f"secrets_{myuuid}.zip"
     zip_path = "temp_zips/%s" % (zip_filename)
     Path("temp_zips").mkdir(parents=True, exist_ok=True)
 
@@ -560,6 +577,8 @@ def create_github_run(myuuid):
     new_github_run.save()
 
 def update_github_run(request):
+    if not _has_upload_token(request):
+        return HttpResponseForbidden("Invalid token")
     data = json.loads(request.body)
     myuuid = data.get('uuid')
     mystatus = data.get('status')
@@ -607,6 +626,9 @@ def resize_and_encode_icon(imagefile):
  
 #the following is used when accessed from an external source, like the rustdesk api server
 def startgh(request):
+    # Disabled in this fork: this endpoint started GitHub builds with arbitrary inputs
+    # without any authentication. It is only needed for the rustdesk-api integration.
+    return HttpResponseForbidden("Disabled")
     #print(request)
     data_ = json.loads(request.body)
     ####from here run the github action, we need user, repo, access token.
@@ -663,6 +685,8 @@ def save_png(file, uuid, domain, name):
     return domain, uuid, name
 
 def save_custom_client(request):
+    if not _has_upload_token(request):
+        return HttpResponseForbidden("Invalid token")
     file = request.FILES['file']
     myuuid = request.POST.get('uuid')
     if not _safe_parts(myuuid, file.name):
@@ -676,11 +700,13 @@ def save_custom_client(request):
     return HttpResponse("File saved successfully!")
 
 def cleanup_secrets(request):
+    if not _has_upload_token(request):
+        return HttpResponseForbidden("Invalid token")
     # Pass the UUID as a query param or in JSON body
     data = json.loads(request.body)
     my_uuid = data.get('uuid')
-    
-    if not my_uuid:
+
+    if not my_uuid or not _UUID_RE.match(my_uuid):
         return HttpResponse("Missing UUID", status=400)
 
     # 1. Find the files in your temp directory matching the UUID
