@@ -324,8 +324,6 @@
                     <label for="{{ form.enableDirectIP.id_for_label }}">{{ form.enableDirectIP }} Enable direct IP access</label><br>
                     
                     <label for="{{ form.autoClose.id_for_label }}">{{ form.autoClose }} Automatically close incoming sessions on user inactivity</label><br>
-
-                    <label for="{{ form.hidecm.id_for_label }}">{{ form.hidecm }} Allow hiding the connection window from remote screen.</label><br>
             </div>
         
             <div class="section">
@@ -391,11 +389,11 @@
             </div>
         </div>
         <div style="text-align: center; margin: 30px 0;">
-            <a href="https://github.com/bryangerlach/rdgen" 
-            target="_blank" 
+            <a href="https://github.com/bryangerlach/rdgen"
+            target="_blank"
             class="sponsor-button">
                 <i class="fab fa-github"></i>
-                Source Code on Github
+                Original Source Code on Github
             </a>
         </div>
         <div style="text-align: center; margin: 30px 0;">
@@ -425,16 +423,6 @@
             previewImage(event.target, 'privacy-preview');
         });
 
-        document.getElementById("{{ form.hidecm.id_for_label }}").addEventListener('change',function() {
-            if (this.checked) {
-                document.getElementById("passwordRequirement").style.display = 'block';
-                document.getElementById("{{ form.permanentPassword.id_for_label }}").focus();
-                document.getElementById("{{ form.passApproveMode.id_for_label }}").value = 'password';
-            } else {
-                document.getElementById("passwordRequirement").style.display = 'none';
-                document.getElementById("{{ form.passApproveMode.id_for_label }}").value = 'password-click';
-            }
-        });
         const enableKeyboard = document.getElementById("{{ form.enableKeyboard.id_for_label }}");
         const enableClipboard = document.getElementById("{{ form.enableClipboard.id_for_label }}");
         const enableFileTransfer = document.getElementById("{{ form.enableFileTransfer.id_for_label }}");

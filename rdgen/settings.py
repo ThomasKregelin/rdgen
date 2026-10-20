@@ -28,7 +28,10 @@ GHBRANCH = os.environ.get("GHBRANCH",'master')
 ZIP_PASSWORD = os.environ.get("ZIP_PASSWORD",'insecure')
 PROTOCOL = os.environ.get("PROTOCOL", 'https')
 REPONAME = os.environ.get("REPONAME", 'rdgen')
-SH_SECRET = os.environ.get('SH_SECRET', 'secret')
+SH_SECRET = os.environ.get('SH_SECRET', '')
+# Gemeinsames Geheimnis zwischen GitHub-Workflows (Secret UPLOAD_TOKEN) und diesem Server.
+# Ohne gesetzten Wert werden Uploads, Status-Updates und Cleanup-Aufrufe abgelehnt.
+UPLOAD_TOKEN = os.environ.get('UPLOAD_TOKEN', '')
 
 MEDIA_URL = '/media/'
 MEDIA_ROOT = os.path.join(BASE_DIR, 'media')

@@ -1,23 +1,27 @@
 services:
   rdgen:
-    # use bryangerlach/rdgen:latest for the latest build
-    #build: .
-    image: bryangerlach/rdgen:latest
+    # Image is built locally from this (reviewed) fork instead of pulling
+    # the upstream author's prebuilt image bryangerlach/rdgen:latest.
+    build: .
     restart: unless-stopped
     environment:
-      SECRET_KEY: "django-insecure-!(t-!f#6g#sr%yfded9(xha)g+=!6craeez^cp+*&bz_7vdk61"
+      # Generate with: python3 -c 'import secrets; print(secrets.token_hex(64))'
+      SECRET_KEY: "change_me"
       GHUSER: "github_username"
       GHBEARER: "github_access_token"
       GENURL: "accessible_url_of_server"
+      # Must match the GitHub secret ZIP_PASSWORD
       ZIP_PASSWORD: ""
+      # Must match the GitHub secret UPLOAD_TOKEN (uploads/status/cleanup are rejected while empty)
+      UPLOAD_TOKEN: ""
       GHBRANCH: "master"
       PROTOCOL: "https"
       REPONAME: "rdgen"
+      # Only needed for a self-hosted Windows runner; leave empty otherwise
       SH_SECRET: ""
     ports:
-      - "8000:8000"
-    dns:
-      - 8.8.8.8
+      # Bound to localhost; expose it through a TLS reverse proxy
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./exe:/opt/rdgen/exe
       - ./png:/opt/rdgen/png
