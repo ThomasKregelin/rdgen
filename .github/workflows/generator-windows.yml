@@ -710,8 +710,20 @@ jobs:
         continue-on-error: true
         if: env.UPLOAD_ARTIFACT == 'true'
         run: |
+          # Originalschreibweise des App-Namens fuer die MSI verwenden (Verknuepfungen, Startmenue, Apps & Features),
+          # sofern er sich vom bereinigten Namen nur in Gross-/Kleinschreibung unterscheidet. Windows behandelt
+          # Dienstnamen, Pfade und Registry-Schluessel ohne Beachtung der Schreibweise, daher bleibt das kompatibel.
+          # Bei Leerzeichen, Umlauten oder Sonderzeichen wird weiterhin der bereinigte Name verwendet.
+          $appName = "${{ env.appname }}"
+          $slugAppName = "${{ env.slug_appname }}"
+          if ($appName -and ($appName.ToLowerInvariant() -ceq $slugAppName.ToLowerInvariant())) {
+            $msiAppName = $appName
+          } else {
+            $msiAppName = $slugAppName
+          }
+          Write-Host "MSI app name: $msiAppName"
           pushd ./res/msi
-          python preprocess.py --app-name "${{ env.slug_appname }}" --arp -d ../../rustdesk
+          python preprocess.py --app-name "$msiAppName" --arp -d ../../rustdesk
           nuget restore msi.sln
           msbuild msi.sln -p:Configuration=Release -p:Platform=x64 /p:TargetVersion=Windows10
           cp ./Package/bin/x64/Release/en-us/Package.msi ../../SignOutput/rustdesk-latest.msi
